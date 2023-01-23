@@ -49,11 +49,55 @@ int main(int argc, char const* argv[])
     time(&t);
     char date[30];
     strftime(date, 30, "%a, %d %b %Y %T %Z", gmtime(&t));
-    printf("%s\n", date);
 
-    char* response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 12\r\n\r\nHello World\n";
-    send(new_socket, response, strlen(response), 0);
-    printf("Response message sent\n");
+
+
+    // Open and read the file
+    FILE *fptr;
+    unsigned char *data_buffer;
+    long filelen;
+
+    if ((fptr = fopen("./hello.html", "rb")) == NULL) {
+        printf("File not found\n");
+        return 1;
+    }
+
+    // Get the length of the file
+    fseek(fptr, 0, SEEK_END);
+    filelen = ftell(fptr);
+    rewind(fptr);
+
+    // Allocate memory for the buffer
+    data_buffer = (unsigned char *)malloc((filelen + 1) * sizeof(char));
+
+    // Read the entire file
+    size_t bytes_read = 0;
+    while(bytes_read < filelen) {
+        bytes_read += fread(data_buffer + bytes_read, 1, filelen - bytes_read, fptr);
+    }
+
+    fclose(fptr);
+
+    // Add a null character to the end of the buffer
+    data_buffer[filelen] = '\0';
+
+    // printf("File content: %s\n", data_buffer);
+
+
+
+
+    size_t response_len = snprintf(NULL, 0, "HTTP/1.1 200 OK\r\nContent-Type: text/HTML\r\nContent-Length: %ld\r\n\r\n%s", filelen, data_buffer);
+    char* response = (char *)malloc(response_len + 1);
+    sprintf(response, "HTTP/1.1 200 OK\r\nContent-Type: text/HTML\r\nContent-Length: %ld\r\n\r\n%s", filelen, data_buffer);
+    if (send(new_socket, response, response_len, 0) == -1) {
+        printf("Error sending response\n");
+        perror("send");
+        exit(1);
+    }
+    printf("Response message sent: %s\n", response);
+    
+    //Free the memory
+    free(data_buffer);
  
     // closing the connected socket
     close(new_socket);
