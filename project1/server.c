@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <time.h>
 #define PORT 15635
 int main(int argc, char const* argv[])
 {
@@ -43,7 +44,14 @@ int main(int argc, char const* argv[])
     }
     valread = read(new_socket, buffer, 1024);
     printf("%s\n", buffer);
-    char* response = "Hello from server"; // TODO: modify this to send HTTP response
+
+    time_t t; // do we need any of this?
+    time(&t);
+    char date[30];
+    strftime(date, 30, "%a, %d %b %Y %T %Z", gmtime(&t));
+    printf("%s\n", date);
+
+    char* response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 12\r\n\r\nHello World\n";
     send(new_socket, response, strlen(response), 0);
     printf("Response message sent\n");
  
