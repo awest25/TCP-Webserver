@@ -59,7 +59,7 @@ int main(int argc, char const* argv[])
         exit(err);
     }
 
-    // parse request
+    // Parse request
     char requestType[BUFFER_SIZE] = {0};
     char requestFile[BUFFER_SIZE] = ".";
     char contentType[BUFFER_SIZE] = {0};
@@ -101,35 +101,44 @@ int main(int argc, char const* argv[])
         exit(err);
     }
 
-    // Get the length of the file
-    fseek(fptr, 0, SEEK_END);
+    // Get size of file
+    fseek(fptr, 0L, SEEK_END);
     filelen = ftell(fptr);
     rewind(fptr);
 
-    // Allocate memory for the buffer
+    // Read the file
     data_buffer = (unsigned char *)malloc((filelen + 1) * sizeof(char));
-
-    // Read the entire file
-    size_t bytes_read = 0;
-    while(bytes_read < filelen) {
-        bytes_read += fread(data_buffer + bytes_read, 1, filelen - bytes_read, fptr);
-    }
-
-    fclose(fptr); // CLOSE fptr
-
-    // Add a null character to the end of the buffer
+    int bytes_read = fread(data_buffer, 1, filelen, fptr);
     data_buffer[filelen] = '\0';
 
+    printf("%ld %ld %d \n", filelen, sizeof(*data_buffer)/sizeof(data_buffer[0]), bytes_read);
+    fclose(fptr); // CLOSE fptr
+
     // 6. Generate and send HTTP response
-    size_t response_len = snprintf(NULL, 0, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %ld\r\n\r\n%s", contentType, filelen, data_buffer);
+    time_t t; 
+    time(&t);
+    char date[30];
+    strftime(date, 30, "%a, %d %b %Y %T %Z", gmtime(&t));
+
+    size_t response_len = snprintf(NULL, 0, 
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: %s\r\n"
+        "Content-Length: %ld\r\n"
+        "Date: %s\r\n"
+        "\r\n%s", contentType, filelen, date, data_buffer);
     char* response = (char *)malloc(response_len + 1);
-    sprintf(response, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %ld\r\n\r\n%s", contentType, filelen, data_buffer);
+    sprintf(response, 
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: %s\r\n"
+        "Content-Length: %ld\r\n"
+        "Date: %s\r\n"
+        "\r\n%s", contentType, filelen, date, data_buffer);
     if (send(new_socket, response, response_len, 0) == -1) {
         int err = errno;
         perror("send() failed");
         exit(err);
     }
-    printf("Response message sent: %s\n", response);
+    printf("%s\n", response);
     
     free(data_buffer); // Free the memory
     close(new_socket); // closing the connected socket
