@@ -14,7 +14,7 @@ int main(int argc, char const* argv[])
     int addrlen = sizeof(address);
     char buffer[1024] = { 0 };
  
-    // Creating socket file descriptor
+    // 1. Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("socket failed");
         exit(EXIT_FAILURE);
@@ -24,17 +24,21 @@ int main(int argc, char const* argv[])
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
  
-    // Forcefully attaching socket to the port 8080
+    // 2. Forcefully attaching socket to the port 15635
     if (bind(server_fd, (struct sockaddr*)&address,
              sizeof(address))
         < 0) {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
+
+    // 3. Listen for connections with the server
     if (listen(server_fd, 3) < 0) {
         perror("listen");
         exit(EXIT_FAILURE);
     }
+
+    // 4. Accept a connection from a client, typically blocks until a client connects with the server
     if ((new_socket
          = accept(server_fd, (struct sockaddr*)&address,
                   (socklen_t*)&addrlen))
@@ -42,7 +46,21 @@ int main(int argc, char const* argv[])
         perror("accept");
         exit(EXIT_FAILURE);
     }
-    valread = read(new_socket, buffer, 1024);
+
+    // !! CLIENT CONNECTED TO SERVER !!
+    // 5. read client request
+    valread = read(new_socket, buffer, 1024); // reads from accept() return value, store in buffer
+    if (valread == -1){
+        perror("read fail");
+        // TODO: exit with correct code
+    } else if (valread == 0) {
+        perror("read fail, socket closed");
+        // TODO: exit with correct code
+    } else if (valread != 1024) {
+        perror("read fail, incorrect number of bytes read");
+        // TODO: exit with correct code
+    }
+
     printf("%s\n", buffer);
 
     time_t t; // do we need any of this?
@@ -50,9 +68,7 @@ int main(int argc, char const* argv[])
     char date[30];
     strftime(date, 30, "%a, %d %b %Y %T %Z", gmtime(&t));
 
-
-
-    // Open and read the file
+    // client requests HTML file
     FILE *fptr;
     unsigned char *data_buffer;
     long filelen;
@@ -82,9 +98,6 @@ int main(int argc, char const* argv[])
     data_buffer[filelen] = '\0';
 
     // printf("File content: %s\n", data_buffer);
-
-
-
 
     size_t response_len = snprintf(NULL, 0, "HTTP/1.1 200 OK\r\nContent-Type: text/HTML\r\nContent-Length: %ld\r\n\r\n%s", filelen, data_buffer);
     char* response = (char *)malloc(response_len + 1);
