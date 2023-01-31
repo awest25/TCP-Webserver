@@ -92,10 +92,11 @@ int main(int argc, char const* argv[])
 
     // Open requested file
     FILE *fptr;
-    unsigned char *data_buffer;
+    unsigned char *dataBuffer;
     long filelen;
 
-    if ((fptr = fopen(requestFile, "rb")) == NULL) { // OPEN fptr
+    fptr = fopen(requestFile, "rb"); // OPEN fptr
+    if (fptr == NULL) { 
         int err = errno;
         perror("fopen failed");
         exit(err);
@@ -107,11 +108,12 @@ int main(int argc, char const* argv[])
     rewind(fptr);
 
     // Read the file
-    data_buffer = (unsigned char *)malloc((filelen + 1) * sizeof(char));
-    int bytes_read = fread(data_buffer, 1, filelen, fptr);
-    data_buffer[filelen] = '\0';
+    dataBuffer = (unsigned char *)malloc((filelen + 1) * sizeof(char));
+    int bytes_read = fread(dataBuffer, 1, filelen, fptr);
+    dataBuffer[filelen] = '\0';
+    int dataBufferLen = sizeof(*dataBuffer)/sizeof(dataBuffer[0]);
 
-    printf("%ld %ld %d \n", filelen, sizeof(*data_buffer)/sizeof(data_buffer[0]), bytes_read);
+    printf("%ld %d %d \n", filelen, dataBufferLen, bytes_read);
     fclose(fptr); // CLOSE fptr
 
     // 6. Generate and send HTTP response
@@ -123,16 +125,16 @@ int main(int argc, char const* argv[])
     size_t response_len = snprintf(NULL, 0, 
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: %s\r\n"
-        "Content-Length: %ld\r\n"
+        "Content-Length: %d\r\n"
         "Date: %s\r\n"
-        "\r\n%s", contentType, filelen, date, data_buffer);
+        "\r\n%s", contentType, dataBufferLen, date, dataBuffer);
     char* response = (char *)malloc(response_len + 1);
     sprintf(response, 
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: %s\r\n"
-        "Content-Length: %ld\r\n"
+        "Content-Length: %d\r\n"
         "Date: %s\r\n"
-        "\r\n%s", contentType, filelen, date, data_buffer);
+        "\r\n%s", contentType, dataBufferLen, date, dataBuffer);
     if (send(new_socket, response, response_len, 0) == -1) {
         int err = errno;
         perror("send() failed");
@@ -140,7 +142,7 @@ int main(int argc, char const* argv[])
     }
     printf("%s\n", response);
     
-    free(data_buffer); // Free the memory
+    free(dataBuffer); // Free the memory
     close(new_socket); // closing the connected socket
     shutdown(server_fd, SHUT_RDWR); // closing the listening socket
     return 0;
