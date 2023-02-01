@@ -54,7 +54,6 @@ int main(int argc, char const* argv[])
         perror("listen() failed");
         exit(err);
     }
-
     // 4. Accept a connection from a client, typically blocks until a client connects with the server
     if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
         int err = errno;
@@ -119,7 +118,7 @@ int main(int argc, char const* argv[])
     rewind(fptr);
 
     // Read the file
-    dataBuffer = (unsigned char *)malloc((filelen + 1) * sizeof(char));
+    dataBuffer = (unsigned char *)malloc((filelen) * sizeof(char));
     int bytes_read = fread(dataBuffer, 1, filelen, fptr);
     dataBuffer[filelen] = '\0';
     int dataBufferLen = sizeof(&dataBuffer)*sizeof(dataBuffer[0]);
@@ -137,19 +136,19 @@ int main(int argc, char const* argv[])
         "Content-Type: %s\r\n"
         "Content-Length: %ld\r\n"
         "Date: %s\r\n"
-        "Connection: close\r\n" // i added this but it does nothing i believe
+        // "Connection: close\r\n" // i added this but it does nothing i believe
         "\r\n", contentType, filelen + 1, date); // need \r\n at the end
     
-    char* response = (char *)malloc(response_len + filelen + 2); // + 1 or 2?
+    char* response = (char *)malloc(response_len + filelen); // + 1 or 2?
     sprintf(response, 
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: %s\r\n"
         "Content-Length: %ld\r\n"
         "Date: %s\r\n"
-        "Connection: close\r\n"
-        "\r\n", contentType, filelen + 1, date);
+        // "Connection: close\r\n"
+        "\r\n", contentType, filelen, date);
     memcpy(response + response_len, dataBuffer, filelen);
-    if (send(new_socket, response, response_len + filelen + 2, 0) == -1) { // + 1 or 2?
+    if (send(new_socket, response, response_len + filelen + 1, 0) == -1) { // + 1 or 2?
         int err = errno;
         perror("send() failed");
         exit(err);
@@ -160,5 +159,5 @@ int main(int argc, char const* argv[])
     free(dataBuffer); // Free the memory
     close(new_socket); // closing the connected socket
     shutdown(server_fd, SHUT_RDWR); // closing the listening socket
-    return 0;
+return 0;
 }
