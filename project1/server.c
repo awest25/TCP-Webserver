@@ -11,6 +11,17 @@
 #define PORT 15635
 #define BUFFER_SIZE 1024
 
+/* 
+    Test File Sizes 
+        test.html   449
+        test.pdf    69609
+        test.txt    21s
+        test.jpg    387448
+        test.png    3418725
+*/
+
+// TODO: set socket to reuse
+
 int main(int argc, char const* argv[])
 {
     int server_fd, new_socket, valread;
@@ -111,9 +122,8 @@ int main(int argc, char const* argv[])
     dataBuffer = (unsigned char *)malloc((filelen + 1) * sizeof(char));
     int bytes_read = fread(dataBuffer, 1, filelen, fptr);
     dataBuffer[filelen] = '\0';
-    int dataBufferLen = sizeof(*dataBuffer)/sizeof(dataBuffer[0]);
+    int dataBufferLen = sizeof(&dataBuffer)*sizeof(dataBuffer[0]);
 
-    printf("%ld %d %d \n", filelen, dataBufferLen, bytes_read);
     fclose(fptr); // CLOSE fptr
 
     // 6. Generate and send HTTP response
@@ -140,6 +150,7 @@ int main(int argc, char const* argv[])
         perror("send() failed");
         exit(err);
     }
+    printf("%ld %d %d %zu\n", filelen, dataBufferLen, bytes_read, response_len);
     printf("%s\n", response);
     
     free(dataBuffer); // Free the memory
