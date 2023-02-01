@@ -10,6 +10,8 @@
 
 #define PORT 15635
 #define BUFFER_SIZE 1024
+#define SPACE "\%20"
+#define SPACE_LEN 3
 
 /* 
     Test File Sizes 
@@ -20,7 +22,35 @@
         test.png    3418725
 */
 
-// TODO: set socket to reuse
+char* replaceSpace(const char* s){
+    int i, numSpace = 0;
+    char* result;
+
+    // search for occurances of %20 in the string
+    for (i = 0; s[i] != '\0'; i++) { 
+        if (strstr(&s[i], SPACE) == &s[i]) { 
+            numSpace++; 
+            i += SPACE_LEN - 1; 
+        } 
+    } 
+    printf("spaces: %d\n", numSpace);
+    result = (char*)malloc(i + numSpace + (SPACE_LEN - 1) + 1);
+
+    // replace all occurrances of %20 with " "
+    i = 0;
+    while (*s) {
+        if (strstr(s, SPACE) == s){
+            strcpy(&result[i], " ");
+            i += 1;
+            s += SPACE_LEN;
+        } else {
+            result[i++] = *s++;
+        }
+    }
+    result[i] = '\0';
+    printf("result: %s\n\n", result);
+    return result;
+}
 
 int main(int argc, char const* argv[])
 {
@@ -80,7 +110,9 @@ int main(int argc, char const* argv[])
     char contentType[BUFFER_SIZE] = {0};
     char tmp[BUFFER_SIZE] = {0};
     char *requestFileType;
+    int spaceReplaced = 0;
 
+    // get file extension
     sscanf(buffer, "%s %s", requestType, tmp);
     strncat(requestFile, tmp, BUFFER_SIZE);
     requestFileType = strrchr(requestFile, '.') + 1;
@@ -90,7 +122,9 @@ int main(int argc, char const* argv[])
         requestFileType = "binary";
     }
 
-    // TODO: handle files with white space
+    // handle files with white space
+    // TODO: fix bug with type offset due to replacing spaces
+    strncpy(requestFile, replaceSpace(requestFile), BUFFER_SIZE);
 
     printf("requested: %s\n", requestFile);
     printf("type: %s\n", requestFileType);
