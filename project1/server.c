@@ -15,7 +15,7 @@
     Test File Sizes 
         test.html   449
         test.pdf    69609
-        test.txt    21s
+        test.txt    21
         test.jpg    387448
         test.png    3418725
 */
@@ -32,6 +32,11 @@ int main(int argc, char const* argv[])
  
     // 1. Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        int err = errno;
+        perror("socket() failed");
+        exit(err);
+    }
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0){
         int err = errno;
         perror("socket() failed");
         exit(err);
@@ -80,7 +85,7 @@ int main(int argc, char const* argv[])
     strncat(requestFile, tmp, BUFFER_SIZE);
     requestFileType = strrchr(requestFile, '.') + 1;
 
-    printf("%s %s %s\n", requestType, requestFile, requestFileType);
+    printf("%s %s %s\n\n", requestType, requestFile, requestFileType);
 
     if (strcmp(requestType, "GET") != 0){
         int err = errno;
@@ -121,7 +126,6 @@ int main(int argc, char const* argv[])
     dataBuffer = (unsigned char *)malloc((filelen) * sizeof(char));
     int bytes_read = fread(dataBuffer, 1, filelen, fptr);
     dataBuffer[filelen] = '\0';
-    int dataBufferLen = sizeof(&dataBuffer)*sizeof(dataBuffer[0]);
 
     fclose(fptr); // CLOSE fptr
 
@@ -153,7 +157,7 @@ int main(int argc, char const* argv[])
         perror("send() failed");
         exit(err);
     }
-    printf("%ld %d %d %zu\n", filelen, dataBufferLen, bytes_read, response_len);
+    printf("File Len:\t%ld\nBytes Read:\t%d\nResponse Len:\t%zu\n\n", filelen, bytes_read, response_len);
     printf("%s\n", response);
     
     free(dataBuffer); // Free the memory
