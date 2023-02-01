@@ -79,13 +79,21 @@ int main(int argc, char const* argv[])
     char requestFile[BUFFER_SIZE] = ".";
     char contentType[BUFFER_SIZE] = {0};
     char tmp[BUFFER_SIZE] = {0};
-    const char *requestFileType;
+    char *requestFileType;
 
     sscanf(buffer, "%s %s", requestType, tmp);
     strncat(requestFile, tmp, BUFFER_SIZE);
     requestFileType = strrchr(requestFile, '.') + 1;
 
-    printf("%s %s %s\n\n", requestType, requestFile, requestFileType);
+    // handle binary files
+    if (strcmp(tmp, requestFileType) == 0){
+        requestFileType = "binary";
+    }
+
+    // TODO: handle files with white space
+
+    printf("requested: %s\n", requestFile);
+    printf("type: %s\n", requestFileType);
 
     if (strcmp(requestType, "GET") != 0){
         int err = errno;
@@ -103,6 +111,8 @@ int main(int argc, char const* argv[])
         strncpy(contentType, "image/jpg", BUFFER_SIZE);
     } else if (strcmp(requestFileType, "png") == 0){
         strncpy(contentType, "image/png", BUFFER_SIZE);
+    } else if (strcmp(requestFileType, "binary") == 0){
+        strncpy(contentType, "application/octet-stream", BUFFER_SIZE);
     }
 
     // Open requested file
@@ -157,11 +167,10 @@ int main(int argc, char const* argv[])
         perror("send() failed");
         exit(err);
     }
-    printf("File Len:\t%ld\nBytes Read:\t%d\nResponse Len:\t%zu\n\n", filelen, bytes_read, response_len);
-    printf("%s\n", response);
-    
+
+    printf("%s\n", response);    
     free(dataBuffer); // Free the memory
     close(new_socket); // closing the connected socket
     shutdown(server_fd, SHUT_RDWR); // closing the listening socket
-return 0;
+    return 0;
 }
