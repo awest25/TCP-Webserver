@@ -135,17 +135,21 @@ int main(int argc, char const* argv[])
     size_t response_len = snprintf(NULL, 0, 
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: %s\r\n"
-        "Content-Length: %d\r\n"
+        "Content-Length: %ld\r\n"
         "Date: %s\r\n"
-        "\r\n%s", contentType, dataBufferLen, date, dataBuffer);
-    char* response = (char *)malloc(response_len + 1);
+        "Connection: close\r\n" // i added this but it does nothing i believe
+        "\r\n", contentType, filelen + 1, date); // need \r\n at the end
+    
+    char* response = (char *)malloc(response_len + filelen + 2); // + 1 or 2?
     sprintf(response, 
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: %s\r\n"
-        "Content-Length: %d\r\n"
+        "Content-Length: %ld\r\n"
         "Date: %s\r\n"
-        "\r\n%s", contentType, dataBufferLen, date, dataBuffer);
-    if (send(new_socket, response, response_len, 0) == -1) {
+        "Connection: close\r\n"
+        "\r\n", contentType, filelen + 1, date);
+    memcpy(response + response_len, dataBuffer, filelen);
+    if (send(new_socket, response, response_len + filelen + 2, 0) == -1) { // + 1 or 2?
         int err = errno;
         perror("send() failed");
         exit(err);
