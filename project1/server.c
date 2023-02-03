@@ -43,9 +43,10 @@ int new_socket, server_fd;
 
 void sigHandler(int signum){
     fprintf(stderr, "\nserver.c: Caught signal %d, exiting safely\n", signum);
-    shutdown(server_fd, SHUT_RDWR); // closing the listening socket
-    close(new_socket); // closing the connected socket'
-    close(server_fd);
+    if (server_fd)
+        shutdown(server_fd, SHUT_RDWR); // closing the listening socket
+    if (new_socket)
+        close(new_socket); // closing the connected socket
     exit(0); 
 }
 
@@ -99,12 +100,12 @@ int main(int argc, char const* argv[])
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         int err = errno;
         perror("socket() failed");
-        exit(err);
+        sigHandler(err);
     }
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0){
         int err = errno;
         perror("socket() failed");
-        exit(err);
+        sigHandler(err);
     }
  
     address.sin_family = AF_INET;
@@ -115,21 +116,21 @@ int main(int argc, char const* argv[])
     if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
         int err = errno;
         perror("bind() failed");
-        exit(err);
+        sigHandler(err);
     }
 
     // 3. Listen for connections with the server
     if (listen(server_fd, 3) < 0) {
         int err = errno;
         perror("listen() failed");
-        exit(err);
+        sigHandler(err);
     }
     // 4. Accept a connection from a client, typically blocks until a client connects with the server
     while (1) {
         if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
             int err = errno;
             perror("accept() failed");
-            exit(err);
+            sigHandler(err);
         }
 
         // 5. Read client request
@@ -137,7 +138,7 @@ int main(int argc, char const* argv[])
         if (valread == -1){
             int err = errno;
             perror("read() failed");
-            exit(err);
+            sigHandler(err);
         }
 
         // Parse request
@@ -172,7 +173,7 @@ int main(int argc, char const* argv[])
         if (strcmp(requestType, "GET") != 0){
             int err = errno;
             perror("incorrect request type");
-            exit(err);
+            sigHandler(err);
         }
 
         if (strcmp(requestFileType, "html") == 0){
@@ -193,61 +194,76 @@ int main(int argc, char const* argv[])
         FILE *fptr;
         unsigned char *dataBuffer;
         long filelen;
+        int notFound = 0;
 
         fptr = fopen(requestFile, "rb"); // OPEN fptr
-        if (fptr == NULL) { 
-            int err = errno;
-            perror("fopen failed");
-            exit(err);
-        }
+        size_t response_len;
+        char* response;
 
-        // Get size of file
-        if (fseek(fptr, 0L, SEEK_END) != 0) exit(errno);
-        filelen = ftell(fptr);
-        if (filelen == -1L) exit(errno);
-        rewind(fptr);
-
-        // Read the file
-        dataBuffer = (unsigned char *)malloc((filelen) * sizeof(char));
-        int bytes_read = fread(dataBuffer, 1, filelen, fptr);
-        dataBuffer[filelen] = '\0';
-
-        fclose(fptr); // CLOSE fptr
-
-        // 6. Generate and send HTTP response
+        // 6. Generate HTTP response
         time_t t; 
         time(&t);
         char date[30];
         strftime(date, 30, "%a, %d %b %Y %T %Z", gmtime(&t));
 
-        size_t response_len = snprintf(NULL, 0, 
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: %s\r\n"
-            "Content-Length: %ld\r\n"
-            "Date: %s\r\n"
-            // "Connection: close\r\n" // i added this but it does nothing i believe
-            "\r\n", contentType, filelen + 1, date); // need \r\n at the end
+        // only open file if it exists, else return 404 not found
+        if (fptr != NULL) { 
+            // Get size of file
+            fseek(fptr, 0L, SEEK_END);
+            filelen = ftell(fptr);
+            rewind(fptr);
+
+            // Read the file
+            dataBuffer = (unsigned char *)malloc((filelen) * sizeof(char));
+            int bytes_read = fread(dataBuffer, 1, filelen, fptr);
+            dataBuffer[filelen] = '\0';
+
+            fclose(fptr); // CLOSE fptr
+
+            response_len = snprintf(NULL, 0, 
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: %s\r\n"
+                "Content-Length: %ld\r\n"
+                "Date: %s\r\n"
+                "\r\n", contentType, filelen + 1, date); 
+            
+            response = (char *)malloc(response_len + filelen);
+
+            sprintf(response, 
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: %s\r\n"
+                "Content-Length: %ld\r\n"
+                "Date: %s\r\n"
+                "\r\n", contentType, filelen, date);
+            memcpy(response + response_len, dataBuffer, filelen);
+            response_len = response_len + filelen + 1; // include filelen in total length
+            free(dataBuffer); // Free the memory
+        } else {
+            response_len = snprintf(NULL, 0, 
+                "HTTP/1.1 404 Not Found\r\n"
+                "Date: %s\r\n"
+                "\r\n"
+                "\r\n", date);
+            
+            response = (char *)malloc(response_len);
+            sprintf(response, 
+                "HTTP/1.1 404 Not Found\r\n"
+                "Date: %s\r\n"
+                "\r\n"
+                "\r\n", date);
+        }
         
-        char* response = (char *)malloc(response_len + filelen); // + 1 or 2?
-        sprintf(response, 
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: %s\r\n"
-            "Content-Length: %ld\r\n"
-            "Date: %s\r\n"
-            // "Connection: close\r\n"
-            "\r\n", contentType, filelen, date);
-        memcpy(response + response_len, dataBuffer, filelen);
-        if (send(new_socket, response, response_len + filelen + 1, 0) == -1) { // + 1 or 2?
+        // 7. Send HTTP response
+        if (send(new_socket, response, response_len, 0) == -1) {
             int err = errno;
             perror("send() failed");
-            exit(err);
+            sigHandler(err);
         }
 
-        printf("%s\n", response);    
-        free(dataBuffer); // Free the memory
+        printf("%s\n", response);   
         printf("\nserver.c: Waiting for a request...\n\n");
     }
     // should not reach this area
-    printf("TCP socket not closed correctly");
+    printf("server.c: TCP socket did not close correctly");
     return 0;
 }
