@@ -42,9 +42,10 @@ int new_socket, server_fd;
 */
 
 void sigHandler(int signum){
-    printf("\nserver.c: Caught signal %d, exiting safely\n", signum);
+    fprintf(stderr, "\nserver.c: Caught signal %d, exiting safely\n", signum);
     shutdown(server_fd, SHUT_RDWR); // closing the listening socket
-    close(new_socket); // closing the connected socket
+    close(new_socket); // closing the connected socket'
+    close(server_fd);
     exit(0); 
 }
 
@@ -61,6 +62,7 @@ char* replaceSpace(const char* s, int* numSpaceReplaced){
         } 
     } 
     result = (char*)malloc(i + (*numSpaceReplaced) + (SPACE_LEN - 1) + 1);
+    if (result == NULL) exit(errno);
 
     // replace all occurrances of %20 with " "
     i = 0;
@@ -79,8 +81,14 @@ char* replaceSpace(const char* s, int* numSpaceReplaced){
 
 int main(int argc, char const* argv[])
 {
-    signal(SIGINT, sigHandler);
-    signal(SIGTERM, sigHandler);
+    if (signal(SIGINT, sigHandler) == SIG_ERR) {
+        fprintf(stderr, "Error setting signal handler for signal %d: %s\n", SIGINT, strerror(errno));
+        exit(errno);
+    }
+    if (signal(SIGTERM, sigHandler) == SIG_ERR) {
+        fprintf(stderr, "Error setting signal handler for signal %d: %s\n", SIGTERM, strerror(errno));
+        exit(errno);
+    }
     int valread;
     struct sockaddr_in address;
     int opt = 1;
@@ -141,7 +149,7 @@ int main(int argc, char const* argv[])
         int numSpaceReplaced = 0;
 
         // get file extension
-        sscanf(buffer, "%s %s", requestType, tmp);
+        if (sscanf(buffer, "%s %s", requestType, tmp) < 0) exit(errno);
         strncat(requestFile, tmp, BUFFER_SIZE);
         requestFileType = strrchr(requestFile, '.') + 1;
 
@@ -194,8 +202,9 @@ int main(int argc, char const* argv[])
         }
 
         // Get size of file
-        fseek(fptr, 0L, SEEK_END);
+        if (fseek(fptr, 0L, SEEK_END) != 0) exit(errno);
         filelen = ftell(fptr);
+        if (filelen == -1L) exit(errno);
         rewind(fptr);
 
         // Read the file
