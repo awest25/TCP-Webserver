@@ -23,6 +23,20 @@
         test.txt    21
         test.jpg    387448
         test.png    3418725
+
+    Requirements
+        jpg                 done
+        png                 done
+        pdf                 done
+        txt                 done
+        html                done
+        binary              done
+        ext with spaces     done
+        ext with %          done  
+        ext with .          done
+        binary with spaces  done
+        binary with %       done
+
 */
 
 char* replaceSpace(const char* s, int* numSpaceReplaced){
@@ -51,7 +65,6 @@ char* replaceSpace(const char* s, int* numSpaceReplaced){
         }
     }
     result[i] = '\0';
-    // printf("result: %s\n\n", result);
     return result;
 }
 
@@ -128,7 +141,7 @@ int main(int argc, char const* argv[])
 
         // handle files with white space
         strncpy(requestFile, replaceSpace(requestFile, &numSpaceReplaced), BUFFER_SIZE);
-        if (numSpaceReplaced != 0){
+        if (numSpaceReplaced != 0 && strcmp(requestFileType, "binary") != 0){
             requestFileType -= (numSpaceReplaced)*SPACE_LEN - 1;
         }
 
