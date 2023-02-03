@@ -7,14 +7,14 @@
 #include <time.h>
 #include <string.h>
 #include <errno.h>
+#include <signal.h>
 
 #define PORT 15635
 #define BUFFER_SIZE 1024
 #define SPACE "\%20"
 #define SPACE_LEN 3
 
-// TODO: binary files with white space
-// curl -o downloadfile localhost:15635/binary%20file
+int new_socket, server_fd;
 
 /* 
     Test File Sizes 
@@ -37,7 +37,16 @@
         binary with spaces  done
         binary with %       done
 
+    curl -o downloadfile localhost:15635/binary%20file
+
 */
+
+void sigHandler(int signum){
+    printf("\nserver.c: Caught signal %d, exiting safely\n", signum);
+    shutdown(server_fd, SHUT_RDWR); // closing the listening socket
+    close(new_socket); // closing the connected socket
+    exit(0); 
+}
 
 char* replaceSpace(const char* s, int* numSpaceReplaced){
     int i = 0;
@@ -70,7 +79,9 @@ char* replaceSpace(const char* s, int* numSpaceReplaced){
 
 int main(int argc, char const* argv[])
 {
-    int server_fd, new_socket, valread;
+    signal(SIGINT, sigHandler);
+    signal(SIGTERM, sigHandler);
+    int valread;
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
@@ -145,10 +156,10 @@ int main(int argc, char const* argv[])
             requestFileType -= (numSpaceReplaced)*SPACE_LEN - 1;
         }
 
-        printf("=========\n");
-        printf("spaces: %d\n", numSpaceReplaced);
-        printf("requested: %s\n", requestFile);
-        printf("type: %s\n", requestFileType);
+        // printf("=========\n");
+        // printf("spaces: %d\n", numSpaceReplaced);
+        // printf("requested: %s\n", requestFile);
+        // printf("type: %s\n", requestFileType);
 
         if (strcmp(requestType, "GET") != 0){
             int err = errno;
@@ -225,8 +236,9 @@ int main(int argc, char const* argv[])
 
         printf("%s\n", response);    
         free(dataBuffer); // Free the memory
+        printf("\nserver.c: Waiting for a request...\n\n");
     }
-    close(new_socket); // closing the connected socket
-    shutdown(server_fd, SHUT_RDWR); // closing the listening socket
+    // should not reach this area
+    printf("TCP socket not closed correctly");
     return 0;
 }
