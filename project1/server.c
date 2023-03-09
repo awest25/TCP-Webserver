@@ -13,6 +13,8 @@
 #define BUFFER_SIZE 1024
 #define SPACE "\%20"
 #define SPACE_LEN 3
+#define PERCENT "\%25"
+#define PERCENT_LEN 3
 
 int new_socket, server_fd;
 
@@ -50,28 +52,40 @@ void sigHandler(int signum){
     exit(0); 
 }
 
-char* replaceSpace(const char* s, int* numSpaceReplaced){
+char* replaceChar(const char* s, int* numReplaced, char c){
     int i = 0;
-    *numSpaceReplaced = 0;
+    *numReplaced = 0;
     char* result;
+    char* target_replace;
+    char* target;
+    int target_len;
+    if (c == ' '){
+        target = "\%20";
+        target_len = 3;
+        target_replace = " ";
+    } else {
+        target = "\%";
+        target_len = 3;
+        target_replace = "\%25";
+    }
 
     // search for occurances of %20 in the string
     for (i = 0; s[i] != '\0'; i++) { 
-        if (strstr(&s[i], SPACE) == &s[i]) { 
-            (*numSpaceReplaced)++; 
-            i += SPACE_LEN - 1; 
+        if (strstr(&s[i], target) == &s[i]) { 
+            (*numReplaced)++; 
+            i += target_len - 1; 
         } 
     } 
-    result = (char*)malloc(i + (*numSpaceReplaced) + (SPACE_LEN - 1) + 1);
+    result = (char*)malloc(i + (*numReplaced) + (target_len - 1) + 1);
     if (result == NULL) exit(errno);
 
     // replace all occurrances of %20 with " "
     i = 0;
     while (*s) {
-        if (strstr(s, SPACE) == s){
+        if (strstr(s, target) == s){
             strcpy(&result[i], " ");
             i += 1;
-            s += SPACE_LEN;
+            s += target_len;
         } else {
             result[i++] = *s++;
         }
@@ -148,6 +162,7 @@ int main(int argc, char const* argv[])
         char tmp[BUFFER_SIZE] = {0};
         char *requestFileType;
         int numSpaceReplaced = 0;
+        int numPercentReplaced = 0;
 
         // get file extension
         if (sscanf(buffer, "%s %s", requestType, tmp) < 0) exit(errno);
@@ -159,16 +174,23 @@ int main(int argc, char const* argv[])
             requestFileType = "binary";
         }
 
+        // handle % sign
+        strncpy(requestFile, replaceChar(requestFile, &numPercentReplaced, '%'), BUFFER_SIZE);
+        if (numSpaceReplaced != 0 && strcmp(requestFileType, "binary") != 0){
+            requestFileType -= (numPercentReplaced)*SPACE_LEN - 1;
+        }
+
         // handle files with white space
-        strncpy(requestFile, replaceSpace(requestFile, &numSpaceReplaced), BUFFER_SIZE);
+        strncpy(requestFile, replaceChar(requestFile, &numSpaceReplaced, ' '), BUFFER_SIZE);
         if (numSpaceReplaced != 0 && strcmp(requestFileType, "binary") != 0){
             requestFileType -= (numSpaceReplaced)*SPACE_LEN - 1;
         }
 
-        // printf("=========\n");
-        // printf("spaces: %d\n", numSpaceReplaced);
-        // printf("requested: %s\n", requestFile);
-        // printf("type: %s\n", requestFileType);
+        printf("=========\n");
+        printf("spaces: %d\n", numSpaceReplaced);
+        printf("percents: %d\n", numPercentReplaced);
+        printf("requested: %s\n", requestFile);
+        printf("type: %s\n", requestFileType);
 
         if (strcmp(requestType, "GET") != 0){
             int err = errno;
