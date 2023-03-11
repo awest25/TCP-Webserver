@@ -1,4 +1,7 @@
+client
+server
 .DS_Store
+*.file
 
 # Prerequisites
 *.d

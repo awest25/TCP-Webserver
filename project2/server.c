@@ -197,12 +197,15 @@ int main (int argc, char *argv[])
         //       without handling data loss.
         //       Only for demo purpose. DO NOT USE IT in your final submission
         struct packet recvpkt;
+        
+        // server must handle clients sequentially (don't close after end)
+        // Safe first file as 1.file
+        // void buildPkt(struct packet* pkt, unsigned short seqnum, unsigned short acknum, char syn, char fin, char ack, char dupack, unsigned int length, const char* payload);
 
         while(1) {
             n = recvfrom(sockfd, &recvpkt, PKT_SIZE, 0, (struct sockaddr *) &cliaddr, (socklen_t *) &cliaddrlen);
             if (n > 0) {
                 printRecv(&recvpkt);
-
                 if (recvpkt.fin) {
                     cliSeqNum = (cliSeqNum + 1) % MAX_SEQN;
 
@@ -212,6 +215,14 @@ int main (int argc, char *argv[])
 
                     break;
                 }
+                fwrite(recvpkt.payload, 1, recvpkt.length, fp);
+                
+                seqNum = seqNum;
+                cliSeqNum = (recvpkt.seqnum + recvpkt.length) % MAX_SEQN;
+
+                buildPkt(&ackpkt, seqNum, cliSeqNum, 0, 0, 1, 0, 0, NULL);
+                printSend(&ackpkt, 0);
+                sendto(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr*) &cliaddr, cliaddrlen);
             }
         }
 

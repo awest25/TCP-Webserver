@@ -210,13 +210,63 @@ int main (int argc, char *argv[])
     //       single data packet, and then tears down the connection without
     //       handling data loss.
     //       Only for demo purpose. DO NOT USE IT in your final submission
+    fprintf(stderr, "------- starting my code code -------\n");
+
     while (1) {
         n = recvfrom(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr *) &servaddr, (socklen_t *) &servaddrlen);
         if (n > 0) {
+            printRecv(&ackpkt);
+            // If we receive a duplicate ACK, break for now (TODO)
+            if (ackpkt.ack && ackpkt.acknum == seqNum) { fprintf(stderr, "breaking bc of duplicate ACK\n"); break; }
+            
+            // // The following code block is not correct
+            // if (ackpkt.ack && ackpkt.acknum == (seqNum + 1) % MAX_SEQN) {
+            //     seqNum = ackpkt.acknum;
+            //     if (full) {
+            //         s = (s + 1) % WND_SIZE;
+            //     }
+            //     e = (e + 1) % WND_SIZE;
+            //     if (e == s) {
+            //         full = 1;
+            //     }
+            //     else {
+            //         full = 0;
+            //     }
+            //     if (m < PAYLOAD_SIZE) {
+            //         break;
+            //     }
+            // }
+
+            fprintf(stderr, "freading the file to send\n");
+            m = fread(buf, 1, PAYLOAD_SIZE, fp);
+
+            // Check if we read the last byte last time
+            if (m == 0) { fprintf(stderr, "breaking becuase m == 0\n"); break; }
+
+            // Update seqNum
+            seqNum = ackpkt.acknum % MAX_SEQN;
+
+            // Build and send packet and duplicate packet
+            buildPkt(&pkts[0], seqNum, 0 % MAX_SEQN, 0, 0, 0, 0, m, buf);
+            printSend(&pkts[0], 0);
+            sendto(sockfd, &pkts[0], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
+            timer = setTimer();
+            buildPkt(&pkts[0], seqNum, (synackpkt.seqnum + 1) % MAX_SEQN, 0, 0, 0, 1, m, buf);
+
+            // Check if we read the last byte this time
+            if (m < PAYLOAD_SIZE) { fprintf(stderr, "breaking becuase m < 0\n"); break; }
+        }
+    }
+
+    while (1) {
+        n = recvfrom(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr *) &servaddr, (socklen_t *) &servaddrlen);
+        if (n > 0) {
+            printRecv(&ackpkt);
             break;
         }
     }
 
+    fprintf(stderr, "------- finished my code code -------\n");
     // *** End of your client implementation ***
     fclose(fp);
 
@@ -270,3 +320,30 @@ int main (int argc, char *argv[])
         }
     }
 }
+
+
+// Original client correctly prints (where hello.txt is < 512 bytes):
+
+// SEND 50 0 SYN
+// RECV 10 51 SYN ACK
+// SEND 51 11 ACK
+// SEND 563 0 FIN
+// RECV 11 564 ACK
+// RECV 11 0 FIN
+// SEND 564 12 ACK
+
+// And server prints:
+
+// RECV 50 0 SYN
+// SEND 10 51 SYN ACK
+// RECV 51 11 ACK
+// SEND 11 563 ACK
+// RECV 563 0 FIN
+// SEND 11 564 ACK
+// SEND 11 0 FIN
+// RECV 564 12 ACK
+
+
+// Commands: 
+// ./server 9999 10
+// ./client 127.0.0.1 9999 50 hello.txt
