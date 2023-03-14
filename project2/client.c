@@ -214,11 +214,11 @@ int main (int argc, char *argv[])
 
     // circular buffer for duplicate packets
     struct packet dup_pkts[WND_SIZE];
-
     int file_is_done = 0;
     
-    while (!file_is_done || s != e) {
+    while (!file_is_done || s + 1 != e) {
         if (!file_is_done) {
+            fprintf(stderr, "-Reading file\n");
             m = fread(buf, 1, PAYLOAD_SIZE, fp);
             if (m == 0) {
                 file_is_done = 1;
@@ -226,6 +226,7 @@ int main (int argc, char *argv[])
             while (full) {
                 n = recvfrom(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr *) &servaddr, (socklen_t *) &servaddrlen);
                 if (n > 0) {
+                    fprintf(stderr, "-It was full but we just recieved an ACK\n");
                     printRecv(&ackpkt);
                     // If the oldest packet (s) is ACKed, move the window forward
                     if (ackpkt.ack && ackpkt.acknum == seqNum) {
@@ -246,15 +247,18 @@ int main (int argc, char *argv[])
             if (s + WND_SIZE - 1 == e) {
                 full = 1;
             }
+            fprintf(stderr, "-Sending packet\n");
             buildPkt(&pkts[e % WND_SIZE], seqNum, (synackpkt.seqnum + 1) % MAX_SEQN, 0, 0, 1, 0, m, buf); // original
             buildPkt(&dup_pkts[e % WND_SIZE], seqNum, (synackpkt.seqnum + 1) % MAX_SEQN, 0, 0, 0, 1, m, buf); // duplicate
             printSend(&pkts[e % WND_SIZE], 0);
             sendto(sockfd, &pkts[e % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
             timer = setTimer();
+            seqNum = (seqNum + m) % MAX_SEQN;
         } else {
             // This is when the file is done, but there are still packets in the window
             n = recvfrom(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr *) &servaddr, (socklen_t *) &servaddrlen);
             if (n > 0) {
+                fprintf(stderr, "-File is done but we just recieved an ACK\n");
                 printRecv(&ackpkt);
                 // If the oldest packet (s) is ACKed, move the window forward
                 if (ackpkt.ack && ackpkt.acknum == seqNum) {
@@ -265,7 +269,7 @@ int main (int argc, char *argv[])
                 }
             } else if (isTimeout(timer)) {
                 printTimeout(&pkts[s % WND_SIZE]);
-                for (unsigned int i = s; (i % WND_SIZE) != e; i++){
+                for (unsigned int i = s; ((i + 1) % WND_SIZE) != e; i++){
                     printSend(&dup_pkts[i % WND_SIZE], 1);
                     sendto(sockfd, &dup_pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
                 }
