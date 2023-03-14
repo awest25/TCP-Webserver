@@ -212,6 +212,9 @@ int main (int argc, char *argv[])
     //       Only for demo purpose. DO NOT USE IT in your final submission
     fprintf(stderr, "------- starting my code code -------\n");
 
+    // circular buffer for duplicate packets
+    struct packet dup_pkts[WND_SIZE];
+
     int file_is_done = 0;
     
     while (!file_is_done || s != e) {
@@ -232,9 +235,10 @@ int main (int argc, char *argv[])
                     }
                 } else if (isTimeout(timer)) {
                     printTimeout(&pkts[s % WND_SIZE]);
-                    printSend(&pkts[s % WND_SIZE], 1); // print resend
-                    // TODO: resend all packets in the window, set bits to resend
-                    sendto(sockfd, &pkts[s % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
+                    for (unsigned int i = s; (i % WND_SIZE) != e; i++){
+                        printSend(&dup_pkts[i % WND_SIZE], 1);
+                        sendto(sockfd, &dup_pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
+                    }
                     timer = setTimer();
                 }
             }
@@ -242,7 +246,8 @@ int main (int argc, char *argv[])
             if (s + WND_SIZE - 1 == e) {
                 full = 1;
             }
-            buildPkt(&pkts[e % WND_SIZE], seqNum, (synackpkt.seqnum + 1) % MAX_SEQN, 0, 0, 1, 0, m, buf);
+            buildPkt(&pkts[e % WND_SIZE], seqNum, (synackpkt.seqnum + 1) % MAX_SEQN, 0, 0, 1, 0, m, buf); // original
+            buildPkt(&dup_pkts[e % WND_SIZE], seqNum, (synackpkt.seqnum + 1) % MAX_SEQN, 0, 0, 0, 1, m, buf); // duplicate
             printSend(&pkts[e % WND_SIZE], 0);
             sendto(sockfd, &pkts[e % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
             timer = setTimer();
@@ -260,8 +265,11 @@ int main (int argc, char *argv[])
                 }
             } else if (isTimeout(timer)) {
                 printTimeout(&pkts[s % WND_SIZE]);
-                printSend(&pkts[s % WND_SIZE], 1); // print resend
-                // TODO resend all
+                for (unsigned int i = s; (i % WND_SIZE) != e; i++){
+                    printSend(&dup_pkts[i % WND_SIZE], 1);
+                    sendto(sockfd, &dup_pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
+                }
+                timer = setTimer(); // restart timer
             }
         }
     }
