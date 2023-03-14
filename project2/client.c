@@ -232,66 +232,37 @@ int main (int argc, char *argv[])
                     }
                 } else if (isTimeout(timer)) {
                     printTimeout(&pkts[s]);
-                    printSend(&pkts[s], 1);
-                    // TODO: resend all packets in the window
+                    printSend(&pkts[s], 1); // print resend
+                    // TODO: resend all packets in the window, set bits to resend
                     sendto(sockfd, &pkts[s], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
                     timer = setTimer();
                 }
             }
-        }
-    } 
-
-    while (1) {
-        n = recvfrom(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr *) &servaddr, (socklen_t *) &servaddrlen);
-        if (n > 0) {
-            printRecv(&ackpkt);
-            // If we receive a duplicate ACK, break for now (TODO)
-            if (ackpkt.ack && ackpkt.acknum == seqNum) { fprintf(stderr, "breaking bc of duplicate ACK\n"); break; }
-            
-            // // The following code block is not correct
-            // if (ackpkt.ack && ackpkt.acknum == (seqNum + 1) % MAX_SEQN) {
-            //     seqNum = ackpkt.acknum;
-            //     if (full) {
-            //         s = (s + 1) % WND_SIZE;
-            //     }
-            //     e = (e + 1) % WND_SIZE;
-            //     if (e == s) {
-            //         full = 1;
-            //     }
-            //     else {
-            //         full = 0;
-            //     }
-            //     if (m < PAYLOAD_SIZE) {
-            //         break;
-            //     }
-            // }
-
-            fprintf(stderr, "freading the file to send\n");
-            m = fread(buf, 1, PAYLOAD_SIZE, fp);
-
-            // Check if we read the last byte last time
-            if (m == 0) { fprintf(stderr, "breaking becuase m == 0\n"); break; }
-
-            // Update seqNum
-            seqNum = ackpkt.acknum % MAX_SEQN;
-
-            // Build and send packet and duplicate packet
-            buildPkt(&pkts[0], seqNum, 0 % MAX_SEQN, 0, 0, 0, 0, m, buf);
-            printSend(&pkts[0], 0);
-            sendto(sockfd, &pkts[0], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
+            e = (e + 1) % WND_SIZE;
+            if (e == s) {
+                full = 1;
+            }
+            buildPkt(&pkts[e], seqNum, (synackpkt.seqnum + 1) % MAX_SEQN, 0, 0, 1, 0, m, buf);
+            printSend(&pkts[e], 0);
+            sendto(sockfd, &pkts[e], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
             timer = setTimer();
-            buildPkt(&pkts[0], seqNum, (synackpkt.seqnum + 1) % MAX_SEQN, 0, 0, 0, 1, m, buf);
-
-            // Check if we read the last byte this time
-            if (m < PAYLOAD_SIZE) { fprintf(stderr, "breaking becuase m < 0\n"); break; }
-        }
-    }
-
-    while (1) {
-        n = recvfrom(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr *) &servaddr, (socklen_t *) &servaddrlen);
-        if (n > 0) {
-            printRecv(&ackpkt);
-            break;
+        } else {
+            // This is when the file is done, but there are still packets in the window
+            n = recvfrom(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr *) &servaddr, (socklen_t *) &servaddrlen);
+            if (n > 0) {
+                printRecv(&ackpkt);
+                // If the oldest packet (s) is ACKed, move the window forward
+                if (ackpkt.ack && ackpkt.acknum == seqNum) {
+                    seqNum = ackpkt.acknum;
+                    s = (s + 1) % WND_SIZE;
+                    full = 0;
+                    setTimer();
+                }
+            } else if (isTimeout(timer)) {
+                printTimeout(&pkts[s]);
+                printSend(&pkts[s], 1); // print resend
+                // TODO resend all
+            }
         }
     }
 
