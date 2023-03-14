@@ -212,6 +212,35 @@ int main (int argc, char *argv[])
     //       Only for demo purpose. DO NOT USE IT in your final submission
     fprintf(stderr, "------- starting my code code -------\n");
 
+    int file_is_done = 0;
+    
+    while (!file_is_done || s != e) {
+        if (!file_is_done) {
+            m = fread(buf, 1, PAYLOAD_SIZE, fp);
+            if (m == 0) {
+                file_is_done = 1;
+            }
+            while (full) {
+                n = recvfrom(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr *) &servaddr, (socklen_t *) &servaddrlen);
+                if (n > 0) {
+                    printRecv(&ackpkt);
+                    // If the oldest packet (s) is ACKed, move the window forward
+                    if (ackpkt.ack && ackpkt.acknum == seqNum) {
+                        seqNum = ackpkt.acknum;
+                        s = (s + 1) % WND_SIZE;
+                        full = 0;
+                    }
+                } else if (isTimeout(timer)) {
+                    printTimeout(&pkts[s]);
+                    printSend(&pkts[s], 1);
+                    // TODO: resend all packets in the window
+                    sendto(sockfd, &pkts[s], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
+                    timer = setTimer();
+                }
+            }
+        }
+    } 
+
     while (1) {
         n = recvfrom(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr *) &servaddr, (socklen_t *) &servaddrlen);
         if (n > 0) {
@@ -347,3 +376,9 @@ int main (int argc, char *argv[])
 // Commands: 
 // ./server 9999 10
 // ./client 127.0.0.1 9999 50 hello.txt
+
+
+
+// Their test cases:
+// ./client localhost 5000 2254 file100
+// ./server 5000 25157
