@@ -227,24 +227,24 @@ int main (int argc, char *argv[])
                     // If the oldest packet (s) is ACKed, move the window forward
                     if (ackpkt.ack && ackpkt.acknum == seqNum) {
                         seqNum = ackpkt.acknum;
-                        s = (s + 1) % WND_SIZE;
+                        s += 1;
                         full = 0;
                     }
                 } else if (isTimeout(timer)) {
-                    printTimeout(&pkts[s]);
-                    printSend(&pkts[s], 1); // print resend
+                    printTimeout(&pkts[s % WND_SIZE]);
+                    printSend(&pkts[s % WND_SIZE], 1); // print resend
                     // TODO: resend all packets in the window, set bits to resend
-                    sendto(sockfd, &pkts[s], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
+                    sendto(sockfd, &pkts[s % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
                     timer = setTimer();
                 }
             }
-            e = (e + 1) % WND_SIZE;
-            if (e == s) {
+            e += 1;
+            if (s + WND_SIZE - 1 == e) {
                 full = 1;
             }
-            buildPkt(&pkts[e], seqNum, (synackpkt.seqnum + 1) % MAX_SEQN, 0, 0, 1, 0, m, buf);
-            printSend(&pkts[e], 0);
-            sendto(sockfd, &pkts[e], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
+            buildPkt(&pkts[e % WND_SIZE], seqNum, (synackpkt.seqnum + 1) % MAX_SEQN, 0, 0, 1, 0, m, buf);
+            printSend(&pkts[e % WND_SIZE], 0);
+            sendto(sockfd, &pkts[e % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
             timer = setTimer();
         } else {
             // This is when the file is done, but there are still packets in the window
@@ -254,13 +254,13 @@ int main (int argc, char *argv[])
                 // If the oldest packet (s) is ACKed, move the window forward
                 if (ackpkt.ack && ackpkt.acknum == seqNum) {
                     seqNum = ackpkt.acknum;
-                    s = (s + 1) % WND_SIZE;
+                    s += 1;
                     full = 0;
                     setTimer();
                 }
             } else if (isTimeout(timer)) {
-                printTimeout(&pkts[s]);
-                printSend(&pkts[s], 1); // print resend
+                printTimeout(&pkts[s % WND_SIZE]);
+                printSend(&pkts[s % WND_SIZE], 1); // print resend
                 // TODO resend all
             }
         }
