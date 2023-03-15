@@ -216,12 +216,15 @@ int main (int argc, char *argv[])
     struct packet dup_pkts[WND_SIZE];
     int file_is_done = 0;
     
+    seqNum = (seqNum + m) % MAX_SEQN;
+    
     while (!file_is_done || s + 1 != e) {
         if (!file_is_done) {
             fprintf(stderr, "-Reading file\n");
             m = fread(buf, 1, PAYLOAD_SIZE, fp);
             if (m == 0) {
                 file_is_done = 1;
+                continue;
             }
             while (full) {
                 n = recvfrom(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr *) &servaddr, (socklen_t *) &servaddrlen);
@@ -248,8 +251,8 @@ int main (int argc, char *argv[])
                 full = 1;
             }
             fprintf(stderr, "-Sending packet\n");
-            buildPkt(&pkts[e % WND_SIZE], seqNum, (synackpkt.seqnum + 1) % MAX_SEQN, 0, 0, 1, 0, m, buf); // original
-            buildPkt(&dup_pkts[e % WND_SIZE], seqNum, (synackpkt.seqnum + 1) % MAX_SEQN, 0, 0, 0, 1, m, buf); // duplicate
+            buildPkt(&pkts[e % WND_SIZE], seqNum, 0, 0, 0, 0, 0, m, buf); // original
+            buildPkt(&dup_pkts[e % WND_SIZE], seqNum, 0, 0, 0, 0, 1, m, buf); // duplicate
             printSend(&pkts[e % WND_SIZE], 0);
             sendto(sockfd, &pkts[e % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
             timer = setTimer();
