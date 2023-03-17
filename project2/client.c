@@ -223,6 +223,7 @@ int main (int argc, char *argv[])
             m = fread(buf, 1, PAYLOAD_SIZE, fp);
             if (m == 0) {
                 file_is_done = 1;
+                fprintf(stderr, "-File is out\n");
                 continue;
             }
             while (full) {
@@ -239,7 +240,7 @@ int main (int argc, char *argv[])
                 } else if (isTimeout(timer)) {
                     printTimeout(&pkts[s % WND_SIZE]);
                     fprintf(stderr, "-Resending Everything (1)\n");
-                    for (unsigned int i = s; ((i + 1) % WND_SIZE) != e; i++){
+                    for (unsigned int i = s; (i % WND_SIZE) != e; i++){
                         fprintf(stderr, "-resend\n");
                         printSend(&pkts[i % WND_SIZE], 1);
                         sendto(sockfd, &pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
@@ -247,7 +248,6 @@ int main (int argc, char *argv[])
                     timer = setTimer();
                 }
             }
-            e += 1;
             if (s + WND_SIZE - 1 == e) {
                 full = 1;
             }
@@ -258,6 +258,7 @@ int main (int argc, char *argv[])
             timer = setTimer();
             buildPkt(&pkts[e % WND_SIZE], seqNum, 0, 0, 0, 0, 1, m, buf); // duplicate
             seqNum = (seqNum + m) % MAX_SEQN;
+            e += 1;
         } else {
             // This is when the file is done, but there are still packets in the window
             n = recvfrom(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr *) &servaddr, (socklen_t *) &servaddrlen);
@@ -274,7 +275,7 @@ int main (int argc, char *argv[])
             } else if (isTimeout(timer)) {
                 printTimeout(&pkts[s % WND_SIZE]);
                 fprintf(stderr, "-Resending Everything (2)\n");
-                for (unsigned int i = s; ((i + 1) % WND_SIZE) != e; i++){
+                for (unsigned int i = s; (i % WND_SIZE) != e; i++){
                     fprintf(stderr, "-resend\n");
                     printSend(&pkts[i % WND_SIZE], 1);
                     sendto(sockfd, &pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
