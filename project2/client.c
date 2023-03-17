@@ -213,7 +213,6 @@ int main (int argc, char *argv[])
     fprintf(stderr, "------- starting my code code -------\n");
 
     // circular buffer for duplicate packets
-    struct packet dup_pkts[WND_SIZE];
     int file_is_done = 0;
     
     seqNum = (seqNum + m) % MAX_SEQN;
@@ -239,9 +238,11 @@ int main (int argc, char *argv[])
                     }
                 } else if (isTimeout(timer)) {
                     printTimeout(&pkts[s % WND_SIZE]);
-                    for (unsigned int i = s; (i % WND_SIZE) != e; i++){
-                        printSend(&dup_pkts[i % WND_SIZE], 1);
-                        sendto(sockfd, &dup_pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
+                    fprintf(stderr, "-Resending Everything (1)\n");
+                    for (unsigned int i = s; ((i + 1) % WND_SIZE) != e; i++){
+                        fprintf(stderr, "-resend\n");
+                        printSend(&pkts[i % WND_SIZE], 1);
+                        sendto(sockfd, &pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
                     }
                     timer = setTimer();
                 }
@@ -252,10 +253,10 @@ int main (int argc, char *argv[])
             }
             fprintf(stderr, "-Sending packet\n");
             buildPkt(&pkts[e % WND_SIZE], seqNum, 0, 0, 0, 0, 0, m, buf); // original
-            buildPkt(&dup_pkts[e % WND_SIZE], seqNum, 0, 0, 0, 0, 1, m, buf); // duplicate
             printSend(&pkts[e % WND_SIZE], 0);
             sendto(sockfd, &pkts[e % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
             timer = setTimer();
+            buildPkt(&pkts[e % WND_SIZE], seqNum, 0, 0, 0, 0, 1, m, buf); // duplicate
             seqNum = (seqNum + m) % MAX_SEQN;
         } else {
             // This is when the file is done, but there are still packets in the window
@@ -272,9 +273,11 @@ int main (int argc, char *argv[])
                 }
             } else if (isTimeout(timer)) {
                 printTimeout(&pkts[s % WND_SIZE]);
+                fprintf(stderr, "-Resending Everything (2)\n");
                 for (unsigned int i = s; ((i + 1) % WND_SIZE) != e; i++){
-                    printSend(&dup_pkts[i % WND_SIZE], 1);
-                    sendto(sockfd, &dup_pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
+                    fprintf(stderr, "-resend\n");
+                    printSend(&pkts[i % WND_SIZE], 1);
+                    sendto(sockfd, &pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
                 }
                 timer = setTimer(); // restart timer
             }
