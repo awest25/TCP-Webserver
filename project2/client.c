@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <fcntl.h>
-#include <netdb.h> 
+#include <netdb.h>
 
 // =====================================
 
@@ -96,8 +96,8 @@ int main (int argc, char *argv[])
 
     struct in_addr servIP;
     if (inet_aton(argv[1], &servIP) == 0) {
-        struct hostent* host_entry; 
-        host_entry = gethostbyname(argv[1]); 
+        struct hostent* host_entry;
+        host_entry = gethostbyname(argv[1]);
         if (host_entry == NULL) {
             perror("ERROR: IP address not in standard dot notation\n");
             exit(1);
@@ -240,7 +240,7 @@ int main (int argc, char *argv[])
                 } else if (isTimeout(timer)) {
                     printTimeout(&pkts[s % WND_SIZE]);
                     fprintf(stderr, "-Resending Everything (1)\n");
-                    for (unsigned int i = s; (i % WND_SIZE) != e; i++){
+                    for (unsigned int i = s; i != e; i++){
                         fprintf(stderr, "-resend\n");
                         printSend(&pkts[i % WND_SIZE], 1);
                         sendto(sockfd, &pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
@@ -275,7 +275,7 @@ int main (int argc, char *argv[])
             } else if (isTimeout(timer)) {
                 printTimeout(&pkts[s % WND_SIZE]);
                 fprintf(stderr, "-Resending Everything (2)\n");
-                for (unsigned int i = s; (i % WND_SIZE) != e; i++){
+                for (unsigned int i = s; i != e; i++){
                     fprintf(stderr, "-resend\n");
                     printSend(&pkts[i % WND_SIZE], 1);
                     sendto(sockfd, &pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
@@ -363,7 +363,7 @@ int main (int argc, char *argv[])
 // RECV 564 12 ACK
 
 
-// Commands: 
+// Commands:
 // ./server 9999 10
 // ./client 127.0.0.1 9999 50 hello.txt
 
