@@ -201,19 +201,19 @@ int main (int argc, char *argv[])
         // server must handle clients sequentially (don't close after end)
         // Safe first file as 1.file
         // void buildPkt(struct packet* pkt, unsigned short seqnum, unsigned short acknum, char syn, char fin, char ack, char dupack, unsigned int length, const char* payload);
-        // fprintf(stderr, "------- starting my code code -------\n");
+        // fprintf(stdout, "------- starting my code code -------\n");
 
         while(1) {
             n = recvfrom(sockfd, &recvpkt, PKT_SIZE, 0, (struct sockaddr *) &cliaddr, (socklen_t *) &cliaddrlen);
             if (n > 0) {
                 printRecv(&recvpkt);
 
-                // Check to ensure packet is not a resend
-                if (recvpkt.dupack) {
-                    printSend(&ackpkt, 0);
-                    sendto(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr*) &cliaddr, cliaddrlen);
-                    continue;
-                }
+                // // Check to ensure packet is not a resend
+                // if (recvpkt.dupack) {
+                //     printSend(&ackpkt, 0);
+                //     sendto(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr*) &cliaddr, cliaddrlen);
+                //     continue;
+                // }
 
                 if (recvpkt.fin) {
                     cliSeqNum = (cliSeqNum + 1) % MAX_SEQN;
@@ -224,6 +224,12 @@ int main (int argc, char *argv[])
 
                     break;
                 }
+                if (recvpkt.seqnum != cliSeqNum) {
+                    buildPkt(&ackpkt, seqNum, cliSeqNum, 0, 0, 0, 1, 0, NULL);
+                    printSend(&ackpkt, 0);
+                    sendto(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr*) &cliaddr, cliaddrlen);
+                    continue;
+                }
                 fwrite(recvpkt.payload, 1, recvpkt.length, fp);
                 
                 cliSeqNum = (recvpkt.seqnum + recvpkt.length) % MAX_SEQN;
@@ -231,7 +237,6 @@ int main (int argc, char *argv[])
                 buildPkt(&ackpkt, seqNum, cliSeqNum, 0, 0, 1, 0, 0, NULL);
                 printSend(&ackpkt, 0);
                 sendto(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr*) &cliaddr, cliaddrlen);
-                buildPkt(&ackpkt, seqNum, cliSeqNum, 0, 0, 0, 1, 0, NULL);
             }
         }
         

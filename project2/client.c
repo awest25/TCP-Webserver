@@ -232,8 +232,8 @@ int main (int argc, char *argv[])
                     fprintf(stderr, "-It was full but we just recieved an ACK\n");
                     printRecv(&ackpkt);
                     // If the oldest packet (s) is ACKed, move the window forward
-                    if (ackpkt.ack && ackpkt.acknum == seqNum) {
-                        seqNum = ackpkt.acknum;
+                    if ((ackpkt.ack || ackpkt.dupack) && ackpkt.acknum >= pkts[s % WND_SIZE].seqnum + 1) {
+//                        seqNum =  pkts[s % WND_SIZE].seqnum + 1 + pkts[s % WND_SIZE].length;
                         s += 1;
                         full = 0;
                     }
@@ -266,8 +266,8 @@ int main (int argc, char *argv[])
                 fprintf(stderr, "-File is done but we just recieved an ACK\n");
                 printRecv(&ackpkt);
                 // If the oldest packet (s) is ACKed, move the window forward
-                if (ackpkt.ack && ackpkt.acknum == seqNum) {
-                    seqNum = ackpkt.acknum;
+                if ((ackpkt.ack || ackpkt.dupack) && ackpkt.acknum >= pkts[s % WND_SIZE].seqnum + 1) {
+//                    seqNum = ackpkt.acknum;
                     s += 1;
                     full = 0;
                     setTimer();
