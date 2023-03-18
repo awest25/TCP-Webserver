@@ -259,7 +259,7 @@ int main (int argc, char *argv[])
                 fprintf(stderr, "-ACK field is %d", pkts[e % WND_SIZE].ack); // BAD
             sendto(sockfd, &pkts[e % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
             timer = setTimer();
-            buildPkt(&pkts[e % WND_SIZE], seqNum, 0, 0, 0, 0, 1, m, buf); // duplicate
+            buildPkt(&pkts[e % WND_SIZE], seqNum, 0, 0, 0, 0, 0, m, buf); // duplicate
             seqNum = (seqNum + m) % MAX_SEQN;
             e += 1;
         } else {
