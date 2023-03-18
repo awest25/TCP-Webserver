@@ -181,6 +181,11 @@ int main (int argc, char *argv[])
                     else if (ackpkt.syn) {
                         buildPkt(&synackpkt, seqNum, (synpkt.seqnum + 1) % MAX_SEQN, 1, 0, 0, 1, 0, NULL);
                         break;
+                    } else if (ackpkt.seqnum < cliSeqNum ||
+                               (ackpkt.seqnum - cliSeqNum) > WND_SIZE * 11) {
+                        buildPkt(&ackpkt, seqNum, cliSeqNum, 0, 0, 1, 1, 0, NULL);
+                        printSend(&ackpkt, 0);
+                        sendto(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr*) &cliaddr, cliaddrlen);
                     }
                 }
             }
