@@ -208,13 +208,6 @@ int main (int argc, char *argv[])
             if (n > 0) {
                 printRecv(&recvpkt);
 
-                // // Check to ensure packet is not a resend
-                // if (recvpkt.dupack) {
-                //     printSend(&ackpkt, 0);
-                //     sendto(sockfd, &ackpkt, PKT_SIZE, 0, (struct sockaddr*) &cliaddr, cliaddrlen);
-                //     continue;
-                // }
-
                 if (recvpkt.fin) {
                     cliSeqNum = (cliSeqNum + 1) % MAX_SEQN;
 

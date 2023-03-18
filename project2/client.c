@@ -217,7 +217,7 @@ int main (int argc, char *argv[])
     
     seqNum = (seqNum + m) % MAX_SEQN;
     
-    while (!file_is_done || s + 1 != e) {
+    while (!file_is_done || s != e) {
         if (!file_is_done) {
             fprintf(stderr, "-Reading file\n");
             m = fread(buf, 1, PAYLOAD_SIZE, fp);
@@ -270,7 +270,6 @@ int main (int argc, char *argv[])
 //                    seqNum = ackpkt.acknum;
                     s += 1;
                     full = 0;
-                    setTimer();
                 }
             } else if (isTimeout(timer)) {
                 printTimeout(&pkts[s % WND_SIZE]);
