@@ -144,7 +144,7 @@ int main (int argc, char *argv[])
     // first piece of along file data thus is further below
 
     struct packet synpkt, synackpkt;
-    unsigned short seqNum = initialSeqNum;
+    unsigned int seqNum = initialSeqNum;
 
     buildPkt(&synpkt, seqNum, 0, 1, 0, 0, 0, 0, NULL);
 
@@ -232,9 +232,7 @@ int main (int argc, char *argv[])
                     fprintf(stderr, "-It was full but we just recieved an ACK\n");
                     printRecv(&ackpkt);
                     // If the oldest packet (s) is ACKed, move the window forward
-                    if ((ackpkt.ack || ackpkt.dupack) &&
-                        (ackpkt.acknum >= pkts[s % WND_SIZE].seqnum + 1 ||
-                         ackpkt.acknum - pkts[s % WND_SIZE].seqnum > PKT_SIZE*(WND_SIZE+1))) {
+                    if ((ackpkt.ack || ackpkt.dupack) && (ackpkt.acknum > pkts[s % WND_SIZE].seqnum || pkts[s % WND_SIZE].seqnum - ackpkt.acknum > PKT_SIZE*(WND_SIZE+1))) {
                         s += 1;
                         full = 0;
                     }
@@ -244,6 +242,8 @@ int main (int argc, char *argv[])
                     for (unsigned int i = s; i != e; i++){
                         fprintf(stderr, "-resend\n");
                         printSend(&pkts[i % WND_SIZE], 1);
+                        if (pkts[i % WND_SIZE].ack)
+                            fprintf(stderr, "-ACK field is %d", pkts[e % WND_SIZE].ack); // BAD
                         sendto(sockfd, &pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
                     }
                     timer = setTimer();
@@ -255,6 +255,8 @@ int main (int argc, char *argv[])
             fprintf(stderr, "-Sending packet\n");
             buildPkt(&pkts[e % WND_SIZE], seqNum, 0, 0, 0, 0, 0, m, buf); // original
             printSend(&pkts[e % WND_SIZE], 0);
+            if (pkts[e % WND_SIZE].ack)
+                fprintf(stderr, "-ACK field is %d", pkts[e % WND_SIZE].ack); // BAD
             sendto(sockfd, &pkts[e % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
             timer = setTimer();
             buildPkt(&pkts[e % WND_SIZE], seqNum, 0, 0, 0, 0, 1, m, buf); // duplicate
@@ -267,7 +269,7 @@ int main (int argc, char *argv[])
                 fprintf(stderr, "-File is done but we just recieved an ACK\n");
                 printRecv(&ackpkt);
                 // If the oldest packet (s) is ACKed, move the window forward
-                if ((ackpkt.ack || ackpkt.dupack) && (ackpkt.acknum >= pkts[s % WND_SIZE].seqnum + 1 || ackpkt.acknum - pkts[s % WND_SIZE].seqnum > PKT_SIZE*(WND_SIZE+1))) {
+                if ((ackpkt.ack || ackpkt.dupack) && (ackpkt.acknum > pkts[s % WND_SIZE].seqnum || pkts[s % WND_SIZE].seqnum - ackpkt.acknum > PKT_SIZE*(WND_SIZE+1))) {
 //                    seqNum = ackpkt.acknum;
                     s += 1;
                     full = 0;
@@ -278,6 +280,8 @@ int main (int argc, char *argv[])
                 for (unsigned int i = s; i != e; i++){
                     fprintf(stderr, "-resend\n");
                     printSend(&pkts[i % WND_SIZE], 1);
+                    if (pkts[i % WND_SIZE].ack)
+                        fprintf(stderr, "-ACK field is %d", pkts[e % WND_SIZE].ack); // BAD
                     sendto(sockfd, &pkts[i % WND_SIZE], PKT_SIZE, 0, (struct sockaddr*) &servaddr, servaddrlen);
                 }
                 timer = setTimer(); // restart timer
