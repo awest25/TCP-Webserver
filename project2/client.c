@@ -233,7 +233,11 @@ int main (int argc, char *argv[])
                     printRecv(&ackpkt);
                     // If the oldest packet (s) is ACKed, move the window forward
                     if ((ackpkt.ack || ackpkt.dupack) && (ackpkt.acknum > pkts[s % WND_SIZE].seqnum || pkts[s % WND_SIZE].seqnum - ackpkt.acknum > PKT_SIZE*(WND_SIZE+1))) {
-                        s += 1;
+                        int windows_acked = 1;
+                        int diff = (ackpkt.acknum - pkts[s % WND_SIZE].seqnum) / PAYLOAD_SIZE;
+                        if (diff >= 2)
+                            windows_acked = diff;
+                        s += windows_acked;
                         full = 0;
                     }
                 } else if (isTimeout(timer)) {
@@ -268,12 +272,13 @@ int main (int argc, char *argv[])
             if (n > 0) {
                 fprintf(stderr, "-File is done but we just recieved an ACK\n");
                 printRecv(&ackpkt);
-                // if (ackpkt.seqnum == 25513)
-                //     ;
                 // If the oldest packet (s) is ACKed, move the window forward
                 if ((ackpkt.ack || ackpkt.dupack) && (ackpkt.acknum > pkts[s % WND_SIZE].seqnum || pkts[s % WND_SIZE].seqnum - ackpkt.acknum > PKT_SIZE*(WND_SIZE+1))) {
-//                    seqNum = ackpkt.acknum;
-                    s += 1;
+                    int windows_acked = 1;
+                    int diff = (ackpkt.acknum - pkts[s % WND_SIZE].seqnum) / PAYLOAD_SIZE;
+                    if (diff >= 2)
+                        windows_acked = diff;
+                    s += windows_acked;
                     full = 0;
                 }
             } else if (isTimeout(timer)) {
