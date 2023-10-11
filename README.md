@@ -1,7 +1,7 @@
 # TCP-Like Webserver over UDP
 
-**Language**: C
-**Date**: Feb 2023
+**Language**: C <br/>
+**Date**: Feb 2023 <br/>
 **Repository**: [github.com/awest25/TCP-Like-Webserver](https://github.com/awest25/TCP-Like-Webserver)
 
 ## Overview
