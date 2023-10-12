@@ -2,7 +2,7 @@
 
 **Language**: C <br/>
 **Date**: Feb 2023 <br/>
-**Repository**: [github.com/awest25/TCP-Like-Webserver](https://github.com/awest25/TCP-Like-Webserver)
+**Repository**: [github.com/awest25/TCP-Webserver](https://github.com/awest25/TCP-Webserver)
 
 ## Overview
 This webserver project involves two key parts. In the first part, located in the "project1" directory, we implemented an unreliable version of a TCP-like protocol using the socket API from scratch. This involved the intricate processes of setting up and tearing down connections, emphasizing the foundational understanding of TCP protocol. 
